@@ -1,0 +1,18 @@
+[Unit]
+Description=GMGN Forwarder Service
+After=network.target
+
+[Service]
+Type=simple
+User=__RUN_USER__
+Group=__RUN_GROUP__
+WorkingDirectory=__INSTALL_DIR__
+Environment="PATH=__RUN_HOME__/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+ExecStart=__UV_BIN__ run python main.py
+Restart=always
+RestartSec=10
+RuntimeMaxSec=43200
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

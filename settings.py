@@ -18,6 +18,8 @@ class Settings:
     dedup_state_path: str
     watchdog_timeout: int
     watchdog_poll_interval: int
+    xvfb_width: int
+    xvfb_height: int
 
 
 def load_settings() -> Settings:
@@ -44,6 +46,8 @@ def load_settings() -> Settings:
         ),
         watchdog_timeout=getenv_int("WATCHDOG_TIMEOUT", 120),
         watchdog_poll_interval=getenv_int("WATCHDOG_POLL_INTERVAL", 5),
+        xvfb_width=getenv_int("XVFB_WIDTH", 1920),
+        xvfb_height=getenv_int("XVFB_HEIGHT", 1080),
     )
 
 

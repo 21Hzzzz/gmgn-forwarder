@@ -24,7 +24,7 @@
 - 可访问 GMGN 的代理
 - Telegram Bot Token 和目标群组 ID
 
-## 安装
+## 本地安装
 
 ```powershell
 uv sync
@@ -33,9 +33,69 @@ uv run playwright install chromium
 
 如果你的网络环境需要额外代理配置，可以参考 [warp-proxy.md](warp-proxy.md)。
 
+## Ubuntu 一键部署
+
+目标环境是 Ubuntu/Debian + systemd。部署脚本会使用运行脚本时的当前进程用户，部署目录为 `$HOME/gmgn-forwarder`。如果用 `sudo bash install.sh` 或 `curl ... | sudo bash` 运行，当前进程用户就是 `root`，服务也会以 `root` 运行。
+
+上传到 GitHub 前，先把 `install.sh` 里的：
+
+```bash
+REPO_URL="https://github.com/YOUR_NAME/gmgn-forwarder.git"
+```
+
+改成你的真实仓库地址。上传后，在服务器执行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/YOUR_NAME/gmgn-forwarder/main/install.sh | bash
+```
+
+安装脚本会自动完成：
+
+- 安装基础包：`curl`、`git`、`ca-certificates`、`xvfb`。
+- 安装 `uv`。
+- 克隆或更新项目。
+- 安装 Python 3.14、Python 依赖、Playwright Chromium。
+- 安装 Playwright Linux 桌面依赖。
+- 安装并启用 `gmgn-forwarder.service`。
+
+如果 `.env` 还没配置，脚本会从 `.env.example` 创建 `.env`，但不会启动服务。先编辑：
+
+```bash
+nano "$HOME/gmgn-forwarder/.env"
+```
+
+首次服务器运行还需要在交互式终端完成 GMGN 授权登录，让 `browser_data/` 写入登录态：
+
+```bash
+cd "$HOME/gmgn-forwarder"
+"$HOME/.local/bin/uv" run python main.py
+```
+
+看到监听页准备完成后，可以按 `Ctrl+C` 停止前台进程，然后启动 systemd 服务：
+
+```bash
+sudo systemctl start gmgn-forwarder.service
+sudo journalctl -u gmgn-forwarder -f
+```
+
+### 卸载
+
+卸载脚本会彻底删除服务、项目目录、`.env`、`browser_data/` 和 `state/`：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/YOUR_NAME/gmgn-forwarder/main/uninstall.sh | bash
+```
+
+也可以在服务器项目目录里执行：
+
+```bash
+cd "$HOME/gmgn-forwarder"
+bash uninstall.sh
+```
+
 ## 配置
 
-在项目根目录创建 `.env`：
+在项目根目录创建 `.env`，或从 `.env.example` 复制：
 
 ```env
 # Telegram
@@ -53,11 +113,19 @@ MONITOR_URL=https://gmgn.ai/follow?target=xTracker&chain=bsc
 STATE_DIR=state
 BROWSER_DATA_DIR=browser_data
 TG_OUTBOX_PATH=state/telegram_outbox.json
+TG_FAILED_PATH=state/failed_telegram.jsonl
 DEDUP_STATE_PATH=state/dedup_ids.json
+
+# Telegram queue
+TG_QUEUE_MAX=1000
 
 # Watchdog
 WATCHDOG_TIMEOUT=120
 WATCHDOG_POLL_INTERVAL=5
+
+# Virtual display
+XVFB_WIDTH=1920
+XVFB_HEIGHT=1080
 ```
 
 ### 配置说明
@@ -77,6 +145,8 @@ WATCHDOG_POLL_INTERVAL=5
 | `TG_QUEUE_MAX`           | 否   | `1000`                                             | outbox 最大消息数，`0` 表示不限制    |
 | `WATCHDOG_TIMEOUT`       | 否   | `120`                                              | watchdog 超时时间，单位秒            |
 | `WATCHDOG_POLL_INTERVAL` | 否   | `5`                                                | watchdog 检查间隔，单位秒            |
+| `XVFB_WIDTH`             | 否   | `1920`                                             | Xvfb 虚拟显示宽度，Linux 服务使用     |
+| `XVFB_HEIGHT`            | 否   | `1080`                                             | Xvfb 虚拟显示高度，Linux 服务使用     |
 
 ## 运行
 
@@ -179,6 +249,10 @@ python -m py_compile actions.py browser_manager.py settings.py gmgn_parser.py te
 ├── telegram_formatter.py   # Telegram 消息格式化
 ├── actions.py              # 动作常量和文案
 ├── watchdog.py             # 超时检测
+├── .env.example            # 环境变量模板
+├── gmgn-forwarder.service  # systemd 服务文件
+├── install.sh              # Ubuntu 一键部署脚本
+├── uninstall.sh            # Ubuntu 彻底卸载脚本
 ├── tests/                  # 单元测试
 ├── WS_DATA_FORMAT.md       # GMGN 数据格式说明
 └── warp-proxy.md           # 可选代理配置说明

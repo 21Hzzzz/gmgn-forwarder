@@ -8,4 +8,5 @@ dependencies = [
     "aiohttp>=3.9",
     "playwright>=1.59.0",
     "python-dotenv>=1.2.2",
+    "xvfbwrapper>=0.2.9",
 ]

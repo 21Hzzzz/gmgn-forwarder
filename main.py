@@ -1,26 +1,76 @@
 import asyncio
+import os
+import subprocess
 
 from browser_manager import BrowserManager
 from deduplicator import MessageDeduplicator
 from gmgn_parser import extract_triggers_map
-from settings import load_settings
+from settings import Settings, load_settings
 from telegram_sender import TelegramSender
 from watchdog import Watchdog
+
+try:
+    from xvfbwrapper import Xvfb
+    XVFB_IMPORT_ERROR = None
+except (ImportError, OSError) as exc:
+    Xvfb = None
+    XVFB_IMPORT_ERROR = exc
+
+
+def _cleanup_orphan_processes() -> None:
+    user = os.environ.get("USER") or os.environ.get("USERNAME") or "ubuntu"
+    for target in ("chromium", "Xvfb"):
+        try:
+            result = subprocess.run(
+                ["pkill", "-u", user, "-f", target],
+                capture_output=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            print("pkill 不存在，跳过旧进程清理")
+            return
+
+        if result.returncode == 0:
+            print(f"已清理旧 {target} 进程")
+        elif result.returncode == 1:
+            print(f"无旧 {target} 进程")
+        else:
+            error = result.stderr.decode(errors="replace").strip()
+            print(f"清理旧 {target} 进程失败，继续启动: {error}")
+
+
+def _start_virtual_display(settings: Settings):
+    if Xvfb is None:
+        raise RuntimeError(
+            "无法启动 Xvfb，请确认在 Linux 环境运行并已安装依赖: uv sync"
+        ) from XVFB_IMPORT_ERROR
+
+    display = Xvfb(width=settings.xvfb_width, height=settings.xvfb_height)
+    display.start()
+    print(f"Xvfb 已启动: {settings.xvfb_width}x{settings.xvfb_height}")
+    return display
 
 
 async def main():
     settings = load_settings()
-    bm = await BrowserManager.create(settings)
-    telegram = TelegramSender(
-        settings.tg_bot_token,
-        settings.tg_chat_id,
-        queue_max=settings.tg_queue_max,
-        outbox_path=settings.tg_outbox_path,
-        failed_path=settings.tg_failed_path,
-    )
-    watchdog = Watchdog(settings.watchdog_timeout)
+    vdisplay = None
+    bm = None
+    telegram = None
 
     try:
+        _cleanup_orphan_processes()
+        vdisplay = _start_virtual_display(settings)
+
+        bm = await BrowserManager.create(settings)
+        telegram = TelegramSender(
+            settings.tg_bot_token,
+            settings.tg_chat_id,
+            queue_max=settings.tg_queue_max,
+            outbox_path=settings.tg_outbox_path,
+            failed_path=settings.tg_failed_path,
+        )
+        watchdog = Watchdog(settings.watchdog_timeout)
+
         await telegram.start()
 
         async def publish(message: dict) -> bool:
@@ -64,8 +114,13 @@ async def main():
     finally:
         if "deduplicator" in locals():
             await deduplicator.close()
-        await telegram.stop()
-        await bm.close()
+        if telegram is not None:
+            await telegram.stop()
+        if bm is not None:
+            await bm.close()
+        if vdisplay is not None:
+            vdisplay.stop()
+            print("Xvfb 已停止")
 
 
 if __name__ == "__main__":
