@@ -40,13 +40,13 @@ uv run playwright install chromium
 上传到 GitHub 前，先把 `install.sh` 里的：
 
 ```bash
-REPO_URL="https://github.com/YOUR_NAME/gmgn-forwarder.git"
+REPO_URL="https://github.com/21Hzzzz/gmgn-forwarder.git"
 ```
 
 改成你的真实仓库地址。上传后，在服务器执行：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_NAME/gmgn-forwarder/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/21Hzzzz/gmgn-forwarder/main/install.sh | bash
 ```
 
 安装脚本会自动完成：
@@ -145,8 +145,8 @@ XVFB_HEIGHT=1080
 | `TG_QUEUE_MAX`           | 否   | `1000`                                             | outbox 最大消息数，`0` 表示不限制    |
 | `WATCHDOG_TIMEOUT`       | 否   | `120`                                              | watchdog 超时时间，单位秒            |
 | `WATCHDOG_POLL_INTERVAL` | 否   | `5`                                                | watchdog 检查间隔，单位秒            |
-| `XVFB_WIDTH`             | 否   | `1920`                                             | Xvfb 虚拟显示宽度，Linux 服务使用     |
-| `XVFB_HEIGHT`            | 否   | `1080`                                             | Xvfb 虚拟显示高度，Linux 服务使用     |
+| `XVFB_WIDTH`             | 否   | `1920`                                             | Xvfb 虚拟显示宽度，Linux 服务使用    |
+| `XVFB_HEIGHT`            | 否   | `1080`                                             | Xvfb 虚拟显示高度，Linux 服务使用    |
 
 ## 运行
 

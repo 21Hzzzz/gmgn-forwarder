@@ -7,7 +7,7 @@ RUN_USER="$(id -un)"
 RUN_GROUP="$(id -gn)"
 RUN_HOME="$(getent passwd "${RUN_USER}" | cut -d: -f6)"
 INSTALL_DIR="${RUN_HOME}/${APP_NAME}"
-REPO_URL="https://github.com/YOUR_NAME/gmgn-forwarder.git"
+REPO_URL="https://github.com/21Hzzzz/gmgn-forwarder.git"
 UV_BIN="${RUN_HOME}/.local/bin/uv"
 SERVICE_TARGET="/etc/systemd/system/${SERVICE_NAME}"
 
